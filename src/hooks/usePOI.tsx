@@ -4,7 +4,7 @@ import { useLocationStore } from '@store/location-store';
 import { useQuotaStore } from '@store/quota-store';
 import { calculateDistance } from '@core/utils/geo';
 import { getZoomForRadius } from '@core/models/poi';
-import { placesAPI } from '@/api';
+import { poiService } from '@/services';
 import type { POI } from '@core/models/poi';
 
 // Search will trigger if moved more than this distance (meters)
@@ -89,26 +89,14 @@ export function usePOI(): UsePOIReturn {
         results.length < SEARCH_CONFIG.minResults &&
         currentRadius <= SEARCH_CONFIG.maxRadius
       ) {
-        results = await placesAPI.searchNearby({
+        results = await poiService.searchNearby({
           latitude: currentPosition.latitude,
           longitude: currentPosition.longitude,
           radius: currentRadius,
           types: enabledTypes
         });
 
-        // Calculate distance for each POI
-        results = results.map((poi) => ({
-          ...poi,
-          distance: calculateDistance(
-            currentPosition.latitude,
-            currentPosition.longitude,
-            poi.location.latitude,
-            poi.location.longitude
-          )
-        }));
-
-        // Sort by distance
-        results.sort((a, b) => a.distance - b.distance);
+        // poiService already calculates distances and sorts by distance
 
         if (results.length < SEARCH_CONFIG.minResults) {
           currentRadius += SEARCH_CONFIG.radiusStep;

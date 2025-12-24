@@ -1,0 +1,9 @@
+name = "roadtripper-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:3000,https://roadtripper.pages.dev"
+
+# Add your Google Places API key via:
+# wrangler secret put GOOGLE_PLACES_API_KEY

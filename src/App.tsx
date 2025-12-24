@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Map } from '@components/Map';
 import { StatusBar } from '@components/StatusBar';
 import { POICardStack } from '@components/POI';
@@ -7,40 +7,47 @@ import { Loading } from '@components/common/Loading';
 import { useLocationStore } from '@store/location-store';
 import { usePOIStore } from '@store/poi-store';
 import { useUIStore } from '@store/ui-store';
-import { MOCK_POIS, MOCK_CURRENT_POSITION } from '@mocks/pois';
+import { usePOI } from '@hooks/usePOI';
+import { useLocation } from '@hooks/useLocation';
 import type { POI } from '@core/models/poi';
 
 export function App() {
-  const currentPosition = useLocationStore((state) => state.currentPosition);
-  const updatePosition = useLocationStore((state) => state.updatePosition);
-  const permissionState = useLocationStore((state) => state.permissionState);
-  const setPermissionState = useLocationStore((state) => state.setPermissionState);
+  const hasInitialSearched = useRef(false);
 
-  const setPOIs = usePOIStore((state) => state.setPOIs);
+  const currentPosition = useLocationStore((state) => state.currentPosition);
+  const permissionState = useLocationStore((state) => state.permissionState);
+
   const setSelectedPOI = usePOIStore((state) => state.setSelectedPOI);
-  const pois = usePOIStore((state) => state.pois);
 
   const isLoading = useUIStore((state) => state.isLoading);
   const setLoading = useUIStore((state) => state.setLoading);
 
-  // Initialize with mock data for development
+  // Initialize location tracking
+  const { startTracking, error: locationError } = useLocation();
+
+  // Initialize POI search
+  const { searchNearby, isSearching, searchError } = usePOI();
+
+  // Start location tracking on mount
   useEffect(() => {
-    setLoading(true, '\u6B63\u5728\u53D6\u5F97\u60A8\u7684\u4F4D\u7F6E...');
+    setLoading(true, '正在取得您的位置...');
+    startTracking();
+  }, [startTracking, setLoading]);
 
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      // Use mock position
-      updatePosition(MOCK_CURRENT_POSITION);
-      setPermissionState('granted');
-
-      // Load mock POIs
-      setPOIs(MOCK_POIS);
-
+  // Stop loading when position is available
+  useEffect(() => {
+    if (currentPosition && isLoading) {
       setLoading(false);
-    }, 1000);
+    }
+  }, [currentPosition, isLoading, setLoading]);
 
-    return () => clearTimeout(timer);
-  }, [updatePosition, setPermissionState, setPOIs, setLoading]);
+  // Initial search when position is first available
+  useEffect(() => {
+    if (currentPosition && !hasInitialSearched.current && !isSearching) {
+      hasInitialSearched.current = true;
+      searchNearby();
+    }
+  }, [currentPosition, searchNearby, isSearching]);
 
   const handlePOISelect = useCallback(
     (poi: POI) => {
@@ -84,12 +91,24 @@ export function App() {
         <main className="relative flex-1">
           <Map onPOIClick={handlePOISelect} />
 
-          {pois.length === 0 && (
+          {isSearching && (
             <div className="absolute left-4 top-4 rounded-full bg-white px-4 py-2 shadow-lg">
               <span className="flex items-center gap-2 text-sm text-gray-600">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
-                {'\u641C\u5C0B\u9644\u8FD1\u5730\u9EDE...'}
+                搜尋附近地點...
               </span>
+            </div>
+          )}
+
+          {searchError && !isSearching && (
+            <div className="absolute left-4 top-4 rounded-lg bg-red-50 px-4 py-2 shadow-lg">
+              <span className="text-sm text-red-600">{searchError}</span>
+            </div>
+          )}
+
+          {locationError && (
+            <div className="absolute left-4 top-4 rounded-lg bg-yellow-50 px-4 py-2 shadow-lg">
+              <span className="text-sm text-yellow-700">{locationError.message}</span>
             </div>
           )}
         </main>

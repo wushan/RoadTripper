@@ -4,6 +4,7 @@ import { useLocationStore } from '@store/location-store';
 import { useQuotaStore } from '@store/quota-store';
 import { calculateDistance } from '@core/utils/geo';
 import { getZoomForRadius } from '@core/models/poi';
+import { placesAPI } from '@/api';
 import type { POI } from '@core/models/poi';
 
 // Search will trigger if moved more than this distance (meters)
@@ -54,14 +55,16 @@ export function usePOI(): UsePOIReturn {
   const incrementSearchCount = useQuotaStore((state) => state.incrementSearchCount);
   const isSearchExceeded = useQuotaStore((state) => state.isSearchExceeded);
 
+  const setPOIs = usePOIStore((state) => state.setPOIs);
+
   const searchNearby = useCallback(async () => {
     if (!currentPosition) {
-      setSearchError('\u7121\u6CD5\u53D6\u5F97\u4F4D\u7F6E\u8CC7\u8A0A');
+      setSearchError('無法取得位置資訊');
       return;
     }
 
     if (isSearchExceeded()) {
-      setSearchError('\u4ECA\u65E5\u641C\u5C0B\u6B21\u6578\u5DF2\u9054\u4E0A\u9650');
+      setSearchError('今日搜尋次數已達上限');
       return;
     }
 
@@ -69,20 +72,52 @@ export function usePOI(): UsePOIReturn {
     setSearchError(null);
 
     try {
-      // TODO: Replace with actual API call in Phase 2
-      // For now, this is a placeholder that would call the Cloudflare Worker
+      // Get enabled POI types from filter
+      const enabledTypes = filter.categories;
 
-      // Simulated delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (enabledTypes.length === 0) {
+        setPOIs([]);
+        setSearchRadius(SEARCH_CONFIG.initialRadius);
+        return;
+      }
 
-      // The actual implementation would:
-      // 1. Start with SEARCH_CONFIG.initialRadius
-      // 2. If results < SEARCH_CONFIG.minResults, expand by SEARCH_CONFIG.radiusStep
-      // 3. Continue until SEARCH_CONFIG.maxRadius or enough results
+      let currentRadius = SEARCH_CONFIG.initialRadius;
+      let results: POI[] = [];
 
-      const finalRadius = SEARCH_CONFIG.initialRadius;
-      setSearchRadius(finalRadius);
-      setSuggestedZoom(getZoomForRadius(finalRadius));
+      // Progressive radius expansion
+      while (
+        results.length < SEARCH_CONFIG.minResults &&
+        currentRadius <= SEARCH_CONFIG.maxRadius
+      ) {
+        results = await placesAPI.searchNearby({
+          latitude: currentPosition.latitude,
+          longitude: currentPosition.longitude,
+          radius: currentRadius,
+          types: enabledTypes
+        });
+
+        // Calculate distance for each POI
+        results = results.map((poi) => ({
+          ...poi,
+          distance: calculateDistance(
+            currentPosition.latitude,
+            currentPosition.longitude,
+            poi.location.latitude,
+            poi.location.longitude
+          )
+        }));
+
+        // Sort by distance
+        results.sort((a, b) => a.distance - b.distance);
+
+        if (results.length < SEARCH_CONFIG.minResults) {
+          currentRadius += SEARCH_CONFIG.radiusStep;
+        }
+      }
+
+      setPOIs(results);
+      setSearchRadius(currentRadius);
+      setSuggestedZoom(getZoomForRadius(currentRadius));
 
       // Update last search position
       setLastSearchPosition(currentPosition.latitude, currentPosition.longitude);
@@ -93,7 +128,8 @@ export function usePOI(): UsePOIReturn {
 
       incrementSearchCount();
     } catch (err) {
-      setSearchError(err instanceof Error ? err.message : '\u641C\u5C0B\u5931\u6557');
+      console.error('Search error:', err);
+      setSearchError(err instanceof Error ? err.message : '搜尋失敗');
     } finally {
       setSearching(false);
     }
@@ -106,7 +142,8 @@ export function usePOI(): UsePOIReturn {
     setSearchRadius,
     setSuggestedZoom,
     setLastSearchPosition,
-    incrementSearchCount
+    incrementSearchCount,
+    setPOIs
   ]);
 
   const selectPOI = useCallback(

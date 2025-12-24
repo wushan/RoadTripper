@@ -30,6 +30,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.dev.vars
 
 # PWA
 dev-dist

@@ -10,6 +10,7 @@ import { usePOIStore } from '@store/poi-store';
 import { useUIStore } from '@store/ui-store';
 import { usePOI } from '@hooks/usePOI';
 import { useLocation } from '@hooks/useLocation';
+import { distanceService } from '@/services';
 import type { POI } from '@core/models/poi';
 
 export function App() {
@@ -29,9 +30,10 @@ export function App() {
   // Initialize POI search
   const { searchNearby, isSearching, searchError } = usePOI();
 
-  // Start location tracking on mount
+  // Initialize distance service and start location tracking on mount
   useEffect(() => {
     setLoading(true, '正在取得您的位置...');
+    distanceService.initialize();
     startTracking();
   }, [startTracking, setLoading]);
 

@@ -7,7 +7,17 @@ type Bindings = {
   ALLOWED_ORIGINS: string;
 };
 
-type PlaceType =
+// Our internal types
+type AppPlaceType =
+  | 'restaurant'
+  | 'cafe'
+  | 'attraction'
+  | 'hotel'
+  | 'gas_station'
+  | 'convenience_store';
+
+// Google Places API types
+type GooglePlaceType =
   | 'restaurant'
   | 'cafe'
   | 'tourist_attraction'
@@ -15,11 +25,21 @@ type PlaceType =
   | 'gas_station'
   | 'convenience_store';
 
+// Map our types to Google Places API types
+const typeToGoogleType: Record<AppPlaceType, GooglePlaceType> = {
+  restaurant: 'restaurant',
+  cafe: 'cafe',
+  attraction: 'tourist_attraction',
+  hotel: 'lodging',
+  gas_station: 'gas_station',
+  convenience_store: 'convenience_store'
+};
+
 interface NearbyRequest {
   latitude: number;
   longitude: number;
   radius: number;
-  types: PlaceType[];
+  types: AppPlaceType[];
 }
 
 interface GooglePlace {
@@ -45,15 +65,22 @@ app.use('*', async (c, next) => {
   const allowedOrigins = c.env.ALLOWED_ORIGINS?.split(',') || [];
   const origin = c.req.header('Origin') || '';
 
+  const corsHeaders: Record<string, string> = {};
+
   if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-    c.header('Access-Control-Allow-Origin', origin);
-    c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    c.header('Access-Control-Allow-Headers', 'Content-Type');
+    corsHeaders['Access-Control-Allow-Origin'] = origin;
+    corsHeaders['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
+    corsHeaders['Access-Control-Allow-Headers'] = 'Content-Type';
   }
 
   if (c.req.method === 'OPTIONS') {
-    return new Response(null, { status: 204 });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // Set headers for non-OPTIONS requests
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    c.header(key, value);
+  });
 
   await next();
 });
@@ -78,9 +105,12 @@ app.post('/api/places/nearby', async (c) => {
       return c.json({ error: 'API key not configured' }, 500);
     }
 
+    // Convert our types to Google Places API types
+    const googleTypes = types.map((t) => typeToGoogleType[t]).filter(Boolean);
+
     // Build Google Places API (New) request
     const requestBody = {
-      includedTypes: types,
+      includedTypes: googleTypes,
       maxResultCount: 20,
       locationRestriction: {
         circle: {

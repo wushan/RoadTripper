@@ -5,6 +5,7 @@ import { POICardStack } from '@components/POI';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { Loading } from '@components/common/Loading';
 import { FilterPanel } from '@components/Filter';
+import { PaywallModal } from '@components/Paywall';
 import { useLocationStore } from '@store/location-store';
 import { usePOIStore } from '@store/poi-store';
 import { useUIStore } from '@store/ui-store';
@@ -119,6 +120,7 @@ export function App() {
         <POICardStack onPOISelect={handlePOISelect} />
 
         <FilterPanel />
+        <PaywallModal />
       </div>
     </ErrorBoundary>
   );

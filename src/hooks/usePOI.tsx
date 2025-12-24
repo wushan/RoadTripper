@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { usePOIStore } from '@store/poi-store';
 import { useLocationStore } from '@store/location-store';
 import { useQuotaStore } from '@store/quota-store';
+import { useUIStore } from '@store/ui-store';
 import { calculateDistance } from '@core/utils/geo';
 import { getZoomForRadius } from '@core/models/poi';
 import { poiService } from '@/services';
@@ -54,6 +55,9 @@ export function usePOI(): UsePOIReturn {
 
   const incrementSearchCount = useQuotaStore((state) => state.incrementSearchCount);
   const isSearchExceeded = useQuotaStore((state) => state.isSearchExceeded);
+  const isDistanceExceeded = useQuotaStore((state) => state.isDistanceExceeded);
+
+  const setPaywallOpen = useUIStore((state) => state.setPaywallOpen);
 
   const setPOIs = usePOIStore((state) => state.setPOIs);
 
@@ -63,8 +67,8 @@ export function usePOI(): UsePOIReturn {
       return;
     }
 
-    if (isSearchExceeded()) {
-      setSearchError('今日搜尋次數已達上限');
+    if (isSearchExceeded() || isDistanceExceeded()) {
+      setPaywallOpen(true);
       return;
     }
 
@@ -125,6 +129,8 @@ export function usePOI(): UsePOIReturn {
     currentPosition,
     filter,
     isSearchExceeded,
+    isDistanceExceeded,
+    setPaywallOpen,
     setSearching,
     setSearchError,
     setSearchRadius,

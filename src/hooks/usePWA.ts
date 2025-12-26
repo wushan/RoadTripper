@@ -32,11 +32,11 @@ export function usePWA(): UsePWAReturn {
     onRegisteredSW(swUrl: string, registration: ServiceWorkerRegistration | undefined) {
       console.log('[PWA] Service Worker registered:', swUrl);
 
-      // Check for updates periodically (every 1 hour)
+      // Check for updates periodically (every 5 minutes)
       if (registration) {
         setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000);
+        }, 5 * 60 * 1000);
       }
     },
     onRegisterError(error: Error) {

@@ -1,9 +1,10 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { Map } from '@components/Map';
 import { StatusBar } from '@components/StatusBar';
 import { POICardStack } from '@components/POI';
 import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { Loading } from '@components/common/Loading';
+import { SplashScreen } from '@components/common/SplashScreen';
 import { FilterPanel } from '@components/Filter';
 import { PaywallModal } from '@components/Paywall';
 import { InstallPrompt, UpdateNotification } from '@components/PWA';
@@ -19,6 +20,7 @@ import type { POI as POIType } from '@core/models/poi';
 
 export function App() {
   const hasInitialSearched = useRef(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   // Apply theme class to document
   useTheme();
@@ -42,6 +44,8 @@ export function App() {
   const setLoading = useUIStore((state) => state.setLoading);
   const isPOIListExpanded = useUIStore((state) => state.isPOIListExpanded);
   const setPOIListExpanded = useUIStore((state) => state.setPOIListExpanded);
+  const collapsePOIList = useUIStore((state) => state.collapsePOIList);
+  const selectedPOIId = usePOIStore((state) => state.selectedPOIId);
 
   // Initialize location tracking
   const { startTracking, error: locationError } = useLocation();
@@ -86,6 +90,20 @@ export function App() {
     [setSelectedPOI, isPOIListExpanded, setPOIListExpanded]
   );
 
+  // Handle click on empty map area: deselect POI, collapse list, center on user
+  const handleMapClick = useCallback(() => {
+    // Only trigger if there's something to deselect or collapse
+    if (selectedPOIId || isPOIListExpanded) {
+      setSelectedPOI(null);
+      collapsePOIList();
+    }
+  }, [selectedPOIId, isPOIListExpanded, setSelectedPOI, collapsePOIList]);
+
+  // Show splash screen on initial load
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
   // Show permission denied screen
   if (permissionState === 'denied') {
     return (
@@ -126,7 +144,7 @@ export function App() {
               isPOIListExpanded ? 'h-[40vh] flex-shrink-0' : 'flex-1'
             }`}
           >
-            <Map onPOIClick={handlePOISelect} listExpanded={isPOIListExpanded} />
+            <Map onPOIClick={handlePOISelect} onMapClick={handleMapClick} listExpanded={isPOIListExpanded} />
 
             {isSearching && (
               <div className="absolute left-4 top-4 rounded-full bg-white dark:bg-gray-800 px-4 py-2 shadow-lg">

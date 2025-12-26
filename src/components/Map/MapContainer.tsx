@@ -20,10 +20,11 @@ const MAX_ZOOM = 18;
 interface MapContainerProps {
   accessToken: string;
   onPOIClick?: (poi: POI) => void;
+  onMapClick?: () => void;
   listExpanded?: boolean;
 }
 
-export function MapContainer({ accessToken, onPOIClick, listExpanded }: MapContainerProps) {
+export function MapContainer({ accessToken, onPOIClick, onMapClick, listExpanded }: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
 
   const currentPosition = useLocationStore((state) => state.currentPosition);
@@ -110,6 +111,11 @@ export function MapContainer({ accessToken, onPOIClick, listExpanded }: MapConta
     [onPOIClick]
   );
 
+  // Handle click on empty map area (POI markers use stopPropagation)
+  const handleMapClick = useCallback(() => {
+    onMapClick?.();
+  }, [onMapClick]);
+
   // Determine the center for the search radius circle
   const radiusCenter = lastSearchPosition
     ? { lat: lastSearchPosition.lat, lng: lastSearchPosition.lng }
@@ -127,6 +133,7 @@ export function MapContainer({ accessToken, onPOIClick, listExpanded }: MapConta
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       attributionControl={false}
+      onClick={handleMapClick}
     >
       <NavigationControl position="top-right" showCompass showZoom />
 

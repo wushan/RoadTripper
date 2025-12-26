@@ -13,8 +13,10 @@ const SWIPE_THRESHOLD = 50; // Minimum swipe distance to trigger action
 
 export function POICardStack({ onPOISelect }: POICardStackProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const handleAreaRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartExpanded = useRef<boolean>(false);
+  const isSwipeGesture = useRef<boolean>(false);
 
   const pois = useFilteredPOIs();
   const selectedPOIId = usePOIStore((state) => state.selectedPOIId);
@@ -58,21 +60,35 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
     [onPOISelect]
   );
 
-  // Touch gesture handlers for swipe to expand/collapse
-  const handleTouchStart = useCallback(
+  // Touch gesture handlers for swipe to expand/collapse (on handle area only)
+  const handleHandleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.touches[0];
       if (!touch) return;
       touchStartY.current = touch.clientY;
       touchStartExpanded.current = isExpanded;
+      isSwipeGesture.current = true;
     },
     [isExpanded]
   );
 
-  const handleTouchEnd = useCallback(
+  const handleHandleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      // Prevent iOS bounce/overscroll on the handle area
+      if (isSwipeGesture.current) {
+        e.preventDefault();
+      }
+    },
+    []
+  );
+
+  const handleHandleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
       const touch = e.changedTouches[0];
-      if (touchStartY.current === null || !touch) return;
+      if (touchStartY.current === null || !touch || !isSwipeGesture.current) {
+        isSwipeGesture.current = false;
+        return;
+      }
 
       const deltaY = touch.clientY - touchStartY.current;
 
@@ -85,6 +101,7 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
       }
 
       touchStartY.current = null;
+      isSwipeGesture.current = false;
     },
     [setPOIListExpanded, collapsePOIList]
   );
@@ -105,38 +122,45 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
       className={`flex flex-col bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-t-2xl shadow-lg transition-all duration-300 ${
         isExpanded ? 'flex-1 min-h-0' : 'flex-shrink-0'
       }`}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
     >
-      {/* Handle bar */}
-      <button
-        onClick={toggleExpanded}
-        className="w-full flex justify-center pt-2 pb-1"
-        aria-label={isExpanded ? '收合' : '展開'}
+      {/* Swipe handle area - handles touch gestures for expand/collapse */}
+      <div
+        ref={handleAreaRef}
+        className="touch-none select-none"
+        onTouchStart={handleHandleTouchStart}
+        onTouchMove={handleHandleTouchMove}
+        onTouchEnd={handleHandleTouchEnd}
       >
-        <div className={`w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 transition-all ${
-          isExpanded ? 'bg-gray-400 dark:bg-gray-500' : ''
-        }`} />
-      </button>
+        {/* Handle bar */}
+        <button
+          onClick={toggleExpanded}
+          className="w-full flex justify-center pt-2 pb-1"
+          aria-label={isExpanded ? '收合' : '展開'}
+        >
+          <div className={`w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 transition-all ${
+            isExpanded ? 'bg-gray-400 dark:bg-gray-500' : ''
+          }`} />
+        </button>
 
-      {/* Header with count */}
-      <div className="flex items-center justify-between px-4 pb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            附近地點
-          </span>
-          <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full">
-            {pois.length}
-          </span>
+        {/* Header with count */}
+        <div className="flex items-center justify-between px-4 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              附近地點
+            </span>
+            <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full">
+              {pois.length}
+            </span>
+          </div>
+          {!isExpanded && remainingCount > 0 && (
+            <button
+              onClick={toggleExpanded}
+              className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              查看全部
+            </button>
+          )}
         </div>
-        {!isExpanded && remainingCount > 0 && (
-          <button
-            onClick={toggleExpanded}
-            className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            查看全部
-          </button>
-        )}
       </div>
 
       {/* Collapsed view - show only top POI */}
@@ -158,7 +182,7 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
       {isExpanded && (
         <div
           ref={containerRef}
-          className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3"
+          className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3 overscroll-contain"
         >
           {pois.map((poi, index) => (
             <div

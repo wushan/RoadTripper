@@ -42,7 +42,7 @@ export function SplashScreen({ onComplete, minDisplayTime = 1500 }: SplashScreen
         <img
           src="/pwa-512x512.png"
           alt="RoadTripper"
-          className="h-32 w-32 drop-shadow-xl"
+          className="h-32 w-32 rounded-3xl shadow-2xl"
         />
       </div>
 

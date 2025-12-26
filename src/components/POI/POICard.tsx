@@ -3,6 +3,8 @@ import type { POI } from '@core/models/poi';
 import { POI_TYPE_ICONS, POI_MARKER_COLORS } from '@core/models/poi';
 import { formatDistance, formatPriceLevel } from '@core/utils/format';
 import { getPlatformServices } from '@/adapters';
+import { useUIStore } from '@store/ui-store';
+import { usePOIStore } from '@store/poi-store';
 
 interface POICardProps {
   poi: POI;
@@ -24,6 +26,9 @@ export const POICard = memo(function POICard({
 
   const hasPhoto = poi.photoUrl && !imageError;
 
+  const collapsePOIList = useUIStore((state) => state.collapsePOIList);
+  const setSelectedPOI = usePOIStore((state) => state.setSelectedPOI);
+
   const handleNavigate = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -34,8 +39,11 @@ export const POICard = memo(function POICard({
         name: poi.name,
         placeId: poi.id
       });
+      // Collapse list and clear selection after opening navigation
+      setSelectedPOI(null);
+      collapsePOIList();
     },
-    [poi]
+    [poi, setSelectedPOI, collapsePOIList]
   );
 
   return (

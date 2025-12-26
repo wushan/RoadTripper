@@ -35,6 +35,8 @@ export function MapContainer({ accessToken, onPOIClick, listExpanded }: MapConta
   const isDarkMode = useUIStore((state) => state.isDarkMode);
   const isSearchRadiusVisible = useUIStore((state) => state.isSearchRadiusVisible);
   const toggleSearchRadiusVisible = useUIStore((state) => state.toggleSearchRadiusVisible);
+  const shouldCenterOnUser = useUIStore((state) => state.shouldCenterOnUser);
+  const setShouldCenterOnUser = useUIStore((state) => state.setShouldCenterOnUser);
 
   const mapStyle = isDarkMode ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
 
@@ -62,24 +64,25 @@ export function MapContainer({ accessToken, onPOIClick, listExpanded }: MapConta
     }
   }, [currentPosition?.latitude, currentPosition?.longitude]);
 
-  // Resize and recenter map when list expanded state changes
+  // Resize map when list expanded state changes, only center on user when explicitly requested
   useEffect(() => {
     if (mapRef.current) {
       // Trigger map resize after the transition
       const timer = setTimeout(() => {
         mapRef.current?.resize();
-        // Recenter on user position
-        if (currentPosition) {
+        // Only recenter on user position when shouldCenterOnUser is true (e.g., list collapsed by user)
+        if (shouldCenterOnUser && currentPosition) {
           mapRef.current?.flyTo({
             center: [currentPosition.longitude, currentPosition.latitude],
             duration: 300
           });
+          setShouldCenterOnUser(false);
         }
       }, 350); // Slightly longer than the CSS transition (300ms)
 
       return () => clearTimeout(timer);
     }
-  }, [listExpanded, currentPosition]);
+  }, [listExpanded, shouldCenterOnUser, currentPosition, setShouldCenterOnUser]);
 
   // Fly to selected POI when selection changes (from list or other source)
   useEffect(() => {

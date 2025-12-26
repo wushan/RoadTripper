@@ -13,6 +13,7 @@ interface UIState {
   isPaywallOpen: boolean;
   isPOIListExpanded: boolean;
   isSearchRadiusVisible: boolean;
+  shouldCenterOnUser: boolean; // Whether to center map on user after list collapse
   toast: Toast | null;
   isLoading: boolean;
   loadingMessage: string;
@@ -28,6 +29,8 @@ interface UIActions {
   setPaywallOpen: (open: boolean) => void;
   togglePOIListExpanded: () => void;
   setPOIListExpanded: (expanded: boolean) => void;
+  collapsePOIList: () => void; // Collapse list and trigger center on user
+  setShouldCenterOnUser: (value: boolean) => void;
   toggleSearchRadiusVisible: () => void;
   showToast: (message: string, type?: Toast['type']) => void;
   hideToast: () => void;
@@ -56,6 +59,7 @@ const initialState: UIState = {
   isPaywallOpen: false,
   isPOIListExpanded: false,
   isSearchRadiusVisible: false,
+  shouldCenterOnUser: false,
   toast: null,
   isLoading: false,
   loadingMessage: '',
@@ -79,9 +83,17 @@ export const useUIStore = create<UIStore>()((set) => ({
   setPaywallOpen: (isPaywallOpen) => set({ isPaywallOpen }),
 
   togglePOIListExpanded: () =>
-    set((state) => ({ isPOIListExpanded: !state.isPOIListExpanded })),
+    set((state) => ({
+      isPOIListExpanded: !state.isPOIListExpanded,
+      shouldCenterOnUser: state.isPOIListExpanded // Center on user when collapsing
+    })),
 
   setPOIListExpanded: (isPOIListExpanded) => set({ isPOIListExpanded }),
+
+  collapsePOIList: () =>
+    set({ isPOIListExpanded: false, shouldCenterOnUser: true }),
+
+  setShouldCenterOnUser: (shouldCenterOnUser) => set({ shouldCenterOnUser }),
 
   toggleSearchRadiusVisible: () =>
     set((state) => ({ isSearchRadiusVisible: !state.isSearchRadiusVisible })),

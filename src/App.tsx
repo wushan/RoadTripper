@@ -41,6 +41,7 @@ export function App() {
   const isLoading = useUIStore((state) => state.isLoading);
   const setLoading = useUIStore((state) => state.setLoading);
   const isPOIListExpanded = useUIStore((state) => state.isPOIListExpanded);
+  const setPOIListExpanded = useUIStore((state) => state.setPOIListExpanded);
 
   // Initialize location tracking
   const { startTracking, error: locationError } = useLocation();
@@ -77,8 +78,12 @@ export function App() {
   const handlePOISelect = useCallback(
     (poi: POIType) => {
       setSelectedPOI(poi.id);
+      // Expand list when selecting a POI from map (without centering on user)
+      if (!isPOIListExpanded) {
+        setPOIListExpanded(true);
+      }
     },
-    [setSelectedPOI]
+    [setSelectedPOI, isPOIListExpanded, setPOIListExpanded]
   );
 
   // Show permission denied screen

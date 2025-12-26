@@ -9,12 +9,19 @@ interface POICardStackProps {
   onPOISelect: (poi: POI) => void;
 }
 
+const SWIPE_THRESHOLD = 50; // Minimum swipe distance to trigger action
+
 export function POICardStack({ onPOISelect }: POICardStackProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchStartExpanded = useRef<boolean>(false);
+
   const pois = useFilteredPOIs();
   const selectedPOIId = usePOIStore((state) => state.selectedPOIId);
   const isExpanded = useUIStore((state) => state.isPOIListExpanded);
   const toggleExpanded = useUIStore((state) => state.togglePOIListExpanded);
+  const setPOIListExpanded = useUIStore((state) => state.setPOIListExpanded);
+  const collapsePOIList = useUIStore((state) => state.collapsePOIList);
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
 
   // Animate new POIs
@@ -51,6 +58,37 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
     [onPOISelect]
   );
 
+  // Touch gesture handlers for swipe to expand/collapse
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      touchStartY.current = touch.clientY;
+      touchStartExpanded.current = isExpanded;
+    },
+    [isExpanded]
+  );
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.changedTouches[0];
+      if (touchStartY.current === null || !touch) return;
+
+      const deltaY = touch.clientY - touchStartY.current;
+
+      if (deltaY < -SWIPE_THRESHOLD && !touchStartExpanded.current) {
+        // Swipe up while collapsed → expand
+        setPOIListExpanded(true);
+      } else if (deltaY > SWIPE_THRESHOLD && touchStartExpanded.current) {
+        // Swipe down while expanded → collapse and center on user
+        collapsePOIList();
+      }
+
+      touchStartY.current = null;
+    },
+    [setPOIListExpanded, collapsePOIList]
+  );
+
   if (pois.length === 0) {
     return (
       <div className="flex h-20 items-center justify-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm text-gray-500 dark:text-gray-400 rounded-t-2xl shadow-lg">
@@ -67,6 +105,8 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
       className={`flex flex-col bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-t-2xl shadow-lg transition-all duration-300 ${
         isExpanded ? 'flex-1 min-h-0' : 'flex-shrink-0'
       }`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Handle bar */}
       <button

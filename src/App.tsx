@@ -6,12 +6,14 @@ import { ErrorBoundary } from '@components/common/ErrorBoundary';
 import { Loading } from '@components/common/Loading';
 import { FilterPanel } from '@components/Filter';
 import { PaywallModal } from '@components/Paywall';
+import { InstallPrompt, UpdateNotification } from '@components/PWA';
 import { useLocationStore } from '@store/location-store';
 import { usePOIStore } from '@store/poi-store';
 import { useUIStore } from '@store/ui-store';
 import { usePOI } from '@hooks/usePOI';
 import { useLocation } from '@hooks/useLocation';
 import { useTheme } from '@hooks/useTheme';
+import { usePWA } from '@hooks/usePWA';
 import { distanceService, filterService } from '@/services';
 import type { POI as POIType } from '@core/models/poi';
 
@@ -20,6 +22,16 @@ export function App() {
 
   // Apply theme class to document
   useTheme();
+
+  // PWA install and update
+  const {
+    canInstall,
+    installApp,
+    dismissInstall,
+    needRefresh,
+    updateApp,
+    dismissUpdate
+  } = usePWA();
 
   const currentPosition = useLocationStore((state) => state.currentPosition);
   const permissionState = useLocationStore((state) => state.permissionState);
@@ -139,6 +151,14 @@ export function App() {
 
         <FilterPanel />
         <PaywallModal />
+
+        {/* PWA Prompts */}
+        {canInstall && (
+          <InstallPrompt onInstall={installApp} onDismiss={dismissInstall} />
+        )}
+        {needRefresh && (
+          <UpdateNotification onUpdate={updateApp} onDismiss={dismissUpdate} />
+        )}
       </div>
     </ErrorBoundary>
   );

@@ -3,3 +3,4 @@ export { usePOI } from './usePOI';
 export { useMap } from './useMap';
 export { useTheme } from './useTheme';
 export { useFilteredPOIs } from './useFilteredPOIs';
+export { usePWA } from './usePWA';

@@ -35,6 +35,9 @@ dist-ssr
 # PWA
 dev-dist
 
+# Brand assets (source files)
+brand-source.png
+
 # TypeScript build info
 *.tsbuildinfo
 vite.config.js

@@ -73,9 +73,20 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationReturn
     location.watchPosition(
       handlePositionUpdate,
       (err) => {
-        setError(err);
+        // Handle different error types appropriately
         if (err.code === 'PERMISSION_DENIED') {
+          setError(err);
           setPermissionState('denied');
+        } else if (err.code === 'POSITION_UNAVAILABLE') {
+          // This is often a transient error (e.g., CoreLocation kCLErrorLocationUnknown)
+          // Don't treat as fatal - the system may recover automatically
+          console.debug('[Location] Transient location error - waiting for GPS signal...');
+          // Don't set error state for transient errors
+        } else if (err.code === 'TIMEOUT') {
+          // Timeout is also transient - watchPosition will keep trying
+          console.debug('[Location] Position timeout - retrying...');
+        } else {
+          setError(err);
         }
       }
     );

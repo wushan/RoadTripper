@@ -42,6 +42,12 @@ interface NearbyRequest {
   types: AppPlaceType[];
 }
 
+interface GooglePhoto {
+  name: string;
+  widthPx: number;
+  heightPx: number;
+}
+
 interface GooglePlace {
   id: string;
   displayName: { text: string };
@@ -52,6 +58,8 @@ interface GooglePlace {
   regularOpeningHours?: { openNow?: boolean };
   formattedAddress?: string;
   primaryType?: string;
+  types?: string[];
+  photos?: GooglePhoto[];
 }
 
 interface GoogleNearbyResponse {
@@ -90,6 +98,13 @@ app.get('/', (c) => {
   return c.json({ status: 'ok', service: 'RoadTripper API' });
 });
 
+// Helper to construct photo URL from Google Places photo reference
+function getPhotoUrl(photo: GooglePhoto | undefined, apiKey: string, maxSize: number = 100): string | undefined {
+  if (!photo?.name) return undefined;
+  // Google Places API (New) photo URL format
+  return `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=${maxSize}&maxWidthPx=${maxSize}&key=${apiKey}`;
+}
+
 // Nearby places search
 app.post('/api/places/nearby', async (c) => {
   try {
@@ -112,6 +127,7 @@ app.post('/api/places/nearby', async (c) => {
     const requestBody = {
       includedTypes: googleTypes,
       maxResultCount: 20,
+      languageCode: 'zh-TW', // Traditional Chinese
       locationRestriction: {
         circle: {
           center: { latitude, longitude },
@@ -128,7 +144,7 @@ app.post('/api/places/nearby', async (c) => {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
           'X-Goog-FieldMask':
-            'places.id,places.displayName,places.location,places.rating,places.userRatingCount,places.priceLevel,places.regularOpeningHours.openNow,places.formattedAddress,places.primaryType'
+            'places.id,places.displayName,places.location,places.rating,places.userRatingCount,places.priceLevel,places.regularOpeningHours.openNow,places.formattedAddress,places.primaryType,places.types,places.photos'
         },
         body: JSON.stringify(requestBody)
       }
@@ -143,20 +159,28 @@ app.post('/api/places/nearby', async (c) => {
     const data: GoogleNearbyResponse = await response.json();
 
     // Transform response to our format
-    const places = (data.places || []).map((place) => ({
-      id: place.id,
-      name: place.displayName?.text || 'Unknown',
-      type: mapGoogleTypeToOurType(place.primaryType),
-      location: {
-        latitude: place.location?.latitude || 0,
-        longitude: place.location?.longitude || 0
-      },
-      rating: place.rating || 0,
-      ratingCount: place.userRatingCount || 0,
-      priceLevel: mapPriceLevel(place.priceLevel),
-      isOpen: place.regularOpeningHours?.openNow,
-      address: place.formattedAddress
-    }));
+    const places = (data.places || []).map((place) => {
+      const mappedType = mapGoogleTypeToOurType(place.primaryType, place.types);
+
+      // Debug logging
+      console.log(`[POI] "${place.displayName?.text}" - primaryType: "${place.primaryType}", types: [${place.types?.join(', ')}] -> mapped: "${mappedType}"`);
+
+      return {
+        id: place.id,
+        name: place.displayName?.text || 'Unknown',
+        type: mappedType,
+        location: {
+          latitude: place.location?.latitude || 0,
+          longitude: place.location?.longitude || 0
+        },
+        rating: place.rating || 0,
+        ratingCount: place.userRatingCount || 0,
+        priceLevel: mapPriceLevel(place.priceLevel),
+        isOpen: place.regularOpeningHours?.openNow,
+        address: place.formattedAddress,
+        photoUrl: getPhotoUrl(place.photos?.[0], apiKey, 80)
+      };
+    });
 
     return c.json({ places });
   } catch (error) {
@@ -176,7 +200,7 @@ app.get('/api/places/:id', async (c) => {
     }
 
     const response = await fetch(
-      `https://places.googleapis.com/v1/places/${placeId}`,
+      `https://places.googleapis.com/v1/places/${placeId}?languageCode=zh-TW`,
       {
         headers: {
           'X-Goog-Api-Key': apiKey,
@@ -209,16 +233,166 @@ app.get('/api/places/:id', async (c) => {
   }
 });
 
-function mapGoogleTypeToOurType(googleType?: string): string {
-  const typeMap: Record<string, string> = {
+function mapGoogleTypeToOurType(primaryType?: string, types?: string[]): string {
+  // Direct mappings for known types
+  const directMap: Record<string, string> = {
     restaurant: 'restaurant',
     cafe: 'cafe',
+    coffee_shop: 'cafe',
     tourist_attraction: 'attraction',
     lodging: 'hotel',
+    hotel: 'hotel',
+    motel: 'hotel',
+    resort_hotel: 'hotel',
     gas_station: 'gas_station',
     convenience_store: 'convenience_store'
   };
-  return typeMap[googleType || ''] || 'restaurant';
+
+  // Attraction types (museums, parks, landmarks, etc.)
+  const attractionTypes = new Set([
+    'tourist_attraction',
+    'museum',
+    'art_gallery',
+    'park',
+    'national_park',
+    'state_park',
+    'city_park',
+    'dog_park',
+    'zoo',
+    'aquarium',
+    'amusement_park',
+    'historical_landmark',
+    'monument',
+    'stadium',
+    'arena',
+    'performing_arts_theater',
+    'movie_theater',
+    'cultural_center',
+    'visitor_center',
+    'church',
+    'temple',
+    'mosque',
+    'synagogue',
+    'hindu_temple',
+    'buddhist_temple',
+    'landmark',
+    'plaza',
+    'botanical_garden',
+    'garden',
+    'campground',
+    'hiking_area',
+    'ski_resort',
+    'beach',
+    'marina',
+    'wildlife_park',
+    'observation_deck',
+    'planetarium',
+    'science_museum',
+    'childrens_museum',
+    'history_museum',
+    'library',
+    'athletic_field',
+    'golf_course',
+    'playground',
+    'swimming_pool',
+    'sports_complex',
+    'tourist_destination',
+    'point_of_interest'
+  ]);
+
+  // Food/drink types
+  const foodTypes = new Set([
+    'restaurant',
+    'bakery',
+    'bar',
+    'food',
+    'meal_delivery',
+    'meal_takeaway',
+    'ice_cream_shop',
+    'pizza_restaurant',
+    'ramen_restaurant',
+    'sushi_restaurant',
+    'chinese_restaurant',
+    'japanese_restaurant',
+    'korean_restaurant',
+    'thai_restaurant',
+    'vietnamese_restaurant',
+    'indian_restaurant',
+    'italian_restaurant',
+    'mexican_restaurant',
+    'american_restaurant',
+    'fast_food_restaurant',
+    'seafood_restaurant',
+    'steak_house',
+    'vegetarian_restaurant',
+    'vegan_restaurant',
+    'breakfast_restaurant',
+    'brunch_restaurant',
+    'hamburger_restaurant',
+    'noodle_restaurant',
+    'sandwich_shop',
+    'tea_house'
+  ]);
+
+  // Check primaryType first
+  if (primaryType) {
+    if (directMap[primaryType]) {
+      return directMap[primaryType];
+    }
+    if (attractionTypes.has(primaryType)) {
+      return 'attraction';
+    }
+    if (foodTypes.has(primaryType)) {
+      return 'restaurant';
+    }
+  }
+
+  // Check types array for better matching
+  if (types && types.length > 0) {
+    // First check for attraction types in the array
+    for (const t of types) {
+      if (attractionTypes.has(t)) {
+        return 'attraction';
+      }
+    }
+
+    // Then check for direct mappings
+    for (const t of types) {
+      if (directMap[t]) {
+        return directMap[t];
+      }
+    }
+
+    // Then check for food types
+    for (const t of types) {
+      if (foodTypes.has(t)) {
+        return 'restaurant';
+      }
+    }
+  }
+
+  // Fallback: check if type name contains hints
+  const typeToCheck = primaryType || (types && types[0]) || '';
+  const lowerType = typeToCheck.toLowerCase();
+
+  if (lowerType.includes('park') || lowerType.includes('garden')) {
+    return 'attraction';
+  }
+  if (lowerType.includes('museum') || lowerType.includes('attraction') || lowerType.includes('landmark')) {
+    return 'attraction';
+  }
+  if (lowerType.includes('restaurant') || lowerType.includes('food')) {
+    return 'restaurant';
+  }
+  if (lowerType.includes('cafe') || lowerType.includes('coffee')) {
+    return 'cafe';
+  }
+  if (lowerType.includes('hotel') || lowerType.includes('lodging')) {
+    return 'hotel';
+  }
+
+  // Final fallback - default to attraction for unknown types
+  return 'attraction';
 }
 
 function mapPriceLevel(priceLevel?: string): number | undefined {

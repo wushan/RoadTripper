@@ -19,6 +19,7 @@ interface PlaceResponse {
   priceLevel?: number;
   isOpen?: boolean;
   address?: string;
+  photoUrl?: string;
 }
 
 interface NearbySearchResponse {
@@ -87,6 +88,7 @@ class PlacesAPI {
       priceLevel: place.priceLevel,
       isOpen: place.isOpen,
       address: place.address,
+      photoUrl: place.photoUrl,
     };
   }
 

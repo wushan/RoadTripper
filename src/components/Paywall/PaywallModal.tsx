@@ -19,7 +19,7 @@ export function PaywallModal() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/50"
+        className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70"
         onClick={() => setPaywallOpen(false)}
         role="button"
         aria-label="Close paywall"
@@ -28,13 +28,13 @@ export function PaywallModal() {
       />
 
       {/* Modal */}
-      <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-2xl">
         {/* Header */}
         <div className="mb-4 text-center">
           <div className="mb-3 text-5xl">
             {isDistanceExceeded ? '🛑' : '🔔'}
           </div>
-          <h2 className="text-xl font-bold text-gray-800">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
             {isDistanceExceeded
               ? '今日探索距離已達上限'
               : isSearchExceeded
@@ -44,14 +44,14 @@ export function PaywallModal() {
         </div>
 
         {/* Stats */}
-        <div className="mb-6 rounded-xl bg-gray-50 p-4">
+        <div className="mb-6 rounded-xl bg-gray-50 dark:bg-gray-700 p-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-600">探索距離</span>
-            <span className="font-medium text-gray-800">
+            <span className="text-sm text-gray-600 dark:text-gray-400">探索距離</span>
+            <span className="font-medium text-gray-800 dark:text-gray-200">
               {(distanceTraveled / 1000).toFixed(1)} / {distanceLimit / 1000} KM
             </span>
           </div>
-          <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+          <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
             <div
               className={`h-full transition-all ${
                 isDistanceExceeded ? 'bg-red-500' : 'bg-blue-500'
@@ -63,12 +63,12 @@ export function PaywallModal() {
           </div>
 
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-600">搜尋次數</span>
-            <span className="font-medium text-gray-800">
+            <span className="text-sm text-gray-600 dark:text-gray-400">搜尋次數</span>
+            <span className="font-medium text-gray-800 dark:text-gray-200">
               {searchCount} / {searchLimit} 次
             </span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
             <div
               className={`h-full transition-all ${
                 isSearchExceeded ? 'bg-red-500' : 'bg-blue-500'
@@ -82,8 +82,8 @@ export function PaywallModal() {
 
         {/* Pro Features */}
         <div className="mb-6">
-          <h3 className="mb-3 text-sm font-medium text-gray-600">Pro 功能</h3>
-          <ul className="space-y-2 text-sm text-gray-700">
+          <h3 className="mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">Pro 功能</h3>
+          <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
               無限探索距離
@@ -116,7 +116,7 @@ export function PaywallModal() {
           </button>
           <button
             onClick={() => setPaywallOpen(false)}
-            className="w-full py-2 text-sm text-gray-500 transition-colors hover:text-gray-700"
+            className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-300"
           >
             明天再繼續探索
           </button>

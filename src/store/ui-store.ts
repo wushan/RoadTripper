@@ -5,13 +5,19 @@ interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
+export type ThemeMode = 'light' | 'dark' | 'system';
+
 interface UIState {
   isFilterPanelOpen: boolean;
   isSettingsOpen: boolean;
   isPaywallOpen: boolean;
+  isPOIListExpanded: boolean;
+  isSearchRadiusVisible: boolean;
   toast: Toast | null;
   isLoading: boolean;
   loadingMessage: string;
+  theme: ThemeMode;
+  isDarkMode: boolean; // Resolved dark mode (considering system preference)
 }
 
 interface UIActions {
@@ -20,20 +26,41 @@ interface UIActions {
   toggleSettings: () => void;
   setSettingsOpen: (open: boolean) => void;
   setPaywallOpen: (open: boolean) => void;
+  togglePOIListExpanded: () => void;
+  setPOIListExpanded: (expanded: boolean) => void;
+  toggleSearchRadiusVisible: () => void;
   showToast: (message: string, type?: Toast['type']) => void;
   hideToast: () => void;
   setLoading: (isLoading: boolean, message?: string) => void;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
 }
 
 type UIStore = UIState & UIActions;
+
+// Helper to check system dark mode preference
+const getSystemDarkMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+};
+
+// Helper to resolve dark mode based on theme setting
+const resolveDarkMode = (theme: ThemeMode): boolean => {
+  if (theme === 'system') return getSystemDarkMode();
+  return theme === 'dark';
+};
 
 const initialState: UIState = {
   isFilterPanelOpen: false,
   isSettingsOpen: false,
   isPaywallOpen: false,
+  isPOIListExpanded: false,
+  isSearchRadiusVisible: false,
   toast: null,
   isLoading: false,
-  loadingMessage: ''
+  loadingMessage: '',
+  theme: 'system',
+  isDarkMode: getSystemDarkMode()
 };
 
 export const useUIStore = create<UIStore>()((set) => ({
@@ -51,10 +78,29 @@ export const useUIStore = create<UIStore>()((set) => ({
 
   setPaywallOpen: (isPaywallOpen) => set({ isPaywallOpen }),
 
+  togglePOIListExpanded: () =>
+    set((state) => ({ isPOIListExpanded: !state.isPOIListExpanded })),
+
+  setPOIListExpanded: (isPOIListExpanded) => set({ isPOIListExpanded }),
+
+  toggleSearchRadiusVisible: () =>
+    set((state) => ({ isSearchRadiusVisible: !state.isSearchRadiusVisible })),
+
   showToast: (message, type = 'info') => set({ toast: { message, type } }),
 
   hideToast: () => set({ toast: null }),
 
   setLoading: (isLoading, message = '') =>
-    set({ isLoading, loadingMessage: message })
+    set({ isLoading, loadingMessage: message }),
+
+  setTheme: (theme) =>
+    set({ theme, isDarkMode: resolveDarkMode(theme) }),
+
+  toggleTheme: () =>
+    set((state) => {
+      // Cycle through: system -> light -> dark -> system
+      const nextTheme: ThemeMode =
+        state.theme === 'system' ? 'light' : state.theme === 'light' ? 'dark' : 'system';
+      return { theme: nextTheme, isDarkMode: resolveDarkMode(nextTheme) };
+    })
 }));

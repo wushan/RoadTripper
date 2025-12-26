@@ -4,11 +4,15 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { UserMarker } from './UserMarker';
 import { POIMarker } from './POIMarker';
+import { SearchRadiusCircle } from './SearchRadiusCircle';
 import { useLocationStore } from '@store/location-store';
 import { usePOIStore } from '@store/poi-store';
+import { useUIStore } from '@store/ui-store';
+import { useFilteredPOIs } from '@hooks/useFilteredPOIs';
 import type { POI } from '@core/models/poi';
 
-const MAP_STYLE = 'mapbox://styles/mapbox/streets-v12';
+const MAP_STYLE_LIGHT = 'mapbox://styles/mapbox/streets-v12';
+const MAP_STYLE_DARK = 'mapbox://styles/mapbox/dark-v11';
 const INITIAL_ZOOM = 15;
 const MIN_ZOOM = 10;
 const MAX_ZOOM = 18;
@@ -16,15 +20,23 @@ const MAX_ZOOM = 18;
 interface MapContainerProps {
   accessToken: string;
   onPOIClick?: (poi: POI) => void;
+  listExpanded?: boolean;
 }
 
-export function MapContainer({ accessToken, onPOIClick }: MapContainerProps) {
+export function MapContainer({ accessToken, onPOIClick, listExpanded }: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
 
   const currentPosition = useLocationStore((state) => state.currentPosition);
-  const pois = usePOIStore((state) => state.pois);
+  const pois = useFilteredPOIs();
   const selectedPOIId = usePOIStore((state) => state.selectedPOIId);
   const suggestedZoom = usePOIStore((state) => state.suggestedZoom);
+  const searchRadius = usePOIStore((state) => state.searchRadius);
+  const lastSearchPosition = usePOIStore((state) => state.lastSearchPosition);
+  const isDarkMode = useUIStore((state) => state.isDarkMode);
+  const isSearchRadiusVisible = useUIStore((state) => state.isSearchRadiusVisible);
+  const toggleSearchRadiusVisible = useUIStore((state) => state.toggleSearchRadiusVisible);
+
+  const mapStyle = isDarkMode ? MAP_STYLE_DARK : MAP_STYLE_LIGHT;
 
   const initialViewState = {
     longitude: currentPosition?.longitude ?? 121.5654,
@@ -50,6 +62,38 @@ export function MapContainer({ accessToken, onPOIClick }: MapContainerProps) {
     }
   }, [currentPosition?.latitude, currentPosition?.longitude]);
 
+  // Resize and recenter map when list expanded state changes
+  useEffect(() => {
+    if (mapRef.current) {
+      // Trigger map resize after the transition
+      const timer = setTimeout(() => {
+        mapRef.current?.resize();
+        // Recenter on user position
+        if (currentPosition) {
+          mapRef.current?.flyTo({
+            center: [currentPosition.longitude, currentPosition.latitude],
+            duration: 300
+          });
+        }
+      }, 350); // Slightly longer than the CSS transition (300ms)
+
+      return () => clearTimeout(timer);
+    }
+  }, [listExpanded, currentPosition]);
+
+  // Fly to selected POI when selection changes (from list or other source)
+  useEffect(() => {
+    if (mapRef.current && selectedPOIId) {
+      const selectedPOI = pois.find((poi) => poi.id === selectedPOIId);
+      if (selectedPOI) {
+        mapRef.current.flyTo({
+          center: [selectedPOI.location.longitude, selectedPOI.location.latitude],
+          duration: 500
+        });
+      }
+    }
+  }, [selectedPOIId, pois]);
+
   const handlePOIClick = useCallback(
     (poi: POI) => {
       if (mapRef.current) {
@@ -63,13 +107,20 @@ export function MapContainer({ accessToken, onPOIClick }: MapContainerProps) {
     [onPOIClick]
   );
 
+  // Determine the center for the search radius circle
+  const radiusCenter = lastSearchPosition
+    ? { lat: lastSearchPosition.lat, lng: lastSearchPosition.lng }
+    : currentPosition
+      ? { lat: currentPosition.latitude, lng: currentPosition.longitude }
+      : null;
+
   return (
     <Map
       ref={mapRef}
       mapboxAccessToken={accessToken}
       initialViewState={initialViewState}
       style={{ width: '100%', height: '100%' }}
-      mapStyle={MAP_STYLE}
+      mapStyle={mapStyle}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       attributionControl={false}
@@ -82,6 +133,41 @@ export function MapContainer({ accessToken, onPOIClick }: MapContainerProps) {
         showUserHeading
         showAccuracyCircle={false}
       />
+
+      {/* Search Radius Toggle Button */}
+      <div className="absolute left-3 top-3 z-10">
+        <button
+          type="button"
+          onClick={toggleSearchRadiusVisible}
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium shadow-md transition-all ${
+            isSearchRadiusVisible
+              ? 'bg-blue-500 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+          aria-label="顯示搜尋範圍"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <circle cx="12" cy="12" r="10" strokeDasharray="4 2" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+          </svg>
+          <span className="hidden sm:inline">搜尋範圍</span>
+        </button>
+      </div>
+
+      {/* Search Radius Circle */}
+      {isSearchRadiusVisible && radiusCenter && (
+        <SearchRadiusCircle
+          latitude={radiusCenter.lat}
+          longitude={radiusCenter.lng}
+          radiusMeters={searchRadius}
+        />
+      )}
 
       {currentPosition && (
         <UserMarker

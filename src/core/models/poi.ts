@@ -86,6 +86,8 @@ export interface POI {
   openingHours?: string;
   /** 縮圖 URL (可選) */
   thumbnail?: string;
+  /** 地點照片 URL (可選) */
+  photoUrl?: string;
   /** 地址 (可選) */
   address?: string;
   /** 電話 (可選) */

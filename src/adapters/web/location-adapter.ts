@@ -23,9 +23,16 @@ export class WebLocationAdapter implements LocationProvider {
       3: 'TIMEOUT'
     };
 
+    // Provide better error messages for known error types
+    const messageMap: Record<number, string> = {
+      1: '定位權限被拒絕',
+      2: '無法取得位置（等待 GPS 訊號中）',
+      3: '定位請求逾時'
+    };
+
     return {
       code: codeMap[error.code] ?? 'UNKNOWN',
-      message: error.message
+      message: messageMap[error.code] ?? error.message
     };
   }
 

@@ -41,7 +41,7 @@ export function FilterPanel() {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/30"
+        className="fixed inset-0 z-40 bg-black/30 dark:bg-black/50"
         onClick={toggleFilterPanel}
         role="button"
         aria-label="Close filter panel"
@@ -50,18 +50,18 @@ export function FilterPanel() {
       />
 
       {/* Panel */}
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white pb-safe shadow-2xl">
+      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white dark:bg-gray-800 pb-safe shadow-2xl">
         {/* Handle */}
         <div className="flex justify-center pt-3">
-          <div className="h-1 w-10 rounded-full bg-gray-300" />
+          <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-lg font-semibold text-gray-800">篩選條件</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">篩選條件</h2>
           <button
             onClick={resetFilter}
-            className="text-sm text-blue-500 hover:text-blue-600"
+            className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
           >
             重設
           </button>
@@ -71,7 +71,7 @@ export function FilterPanel() {
         <div className="max-h-[60vh] space-y-6 overflow-y-auto px-4 pb-6">
           {/* Categories */}
           <section>
-            <h3 className="mb-3 text-sm font-medium text-gray-600">類別</h3>
+            <h3 className="mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">類別</h3>
             <div className="grid grid-cols-3 gap-2">
               {ALL_CATEGORIES.map((category) => {
                 const isActive = filter.categories.includes(category);
@@ -83,8 +83,8 @@ export function FilterPanel() {
                     onClick={() => toggleCategory(category)}
                     className={`relative flex flex-col items-center rounded-lg border-2 p-3 transition-all ${
                       isActive
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
                     {isPremium && (
@@ -99,7 +99,7 @@ export function FilterPanel() {
                       {POI_TYPE_ICONS[category]}
                     </span>
                     <span
-                      className={`text-xs ${isActive ? 'font-medium text-blue-700' : 'text-gray-600'}`}
+                      className={`text-xs ${isActive ? 'font-medium text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}
                     >
                       {POI_TYPE_LABELS[category]}
                     </span>
@@ -111,7 +111,7 @@ export function FilterPanel() {
 
           {/* Minimum Rating */}
           <section>
-            <h3 className="mb-3 text-sm font-medium text-gray-600">最低評分</h3>
+            <h3 className="mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">最低評分</h3>
             <div className="flex gap-2">
               {[0, 3.0, 3.5, 4.0, 4.5].map((rating) => (
                 <button
@@ -119,8 +119,8 @@ export function FilterPanel() {
                   onClick={() => handleMinRatingChange(rating)}
                   className={`flex-1 rounded-lg border-2 px-2 py-2 text-sm transition-all ${
                     filter.minRating === rating
-                      ? 'border-blue-500 bg-blue-50 font-medium text-blue-700'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 font-medium text-blue-700 dark:text-blue-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
                   }`}
                 >
                   {rating === 0 ? '不限' : `${rating}+`}
@@ -132,13 +132,13 @@ export function FilterPanel() {
           {/* Open Now Toggle */}
           <section>
             <label className="flex cursor-pointer items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">只顯示營業中</span>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">只顯示營業中</span>
               <button
                 role="switch"
                 aria-checked={filter.openNow}
                 onClick={() => handleOpenNowChange(!filter.openNow)}
                 className={`relative h-7 w-12 rounded-full transition-colors ${
-                  filter.openNow ? 'bg-blue-500' : 'bg-gray-300'
+                  filter.openNow ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               >
                 <span
@@ -152,7 +152,7 @@ export function FilterPanel() {
         </div>
 
         {/* Apply Button */}
-        <div className="border-t border-gray-100 px-4 py-4">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-4">
           <button
             onClick={toggleFilterPanel}
             className="w-full rounded-xl bg-blue-500 py-3 font-medium text-white transition-colors hover:bg-blue-600 active:bg-blue-700"

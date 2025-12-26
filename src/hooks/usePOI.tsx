@@ -38,6 +38,7 @@ interface UsePOIReturn {
 
 export function usePOI(): UsePOIReturn {
   const lastSearchPositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const previousFilterRef = useRef<string | null>(null);
 
   const currentPosition = useLocationStore((state) => state.currentPosition);
 
@@ -93,14 +94,25 @@ export function usePOI(): UsePOIReturn {
         results.length < SEARCH_CONFIG.minResults &&
         currentRadius <= SEARCH_CONFIG.maxRadius
       ) {
-        results = await poiService.searchNearby({
+        let rawResults = await poiService.searchNearby({
           latitude: currentPosition.latitude,
           longitude: currentPosition.longitude,
           radius: currentRadius,
           types: enabledTypes
         });
 
-        // poiService already calculates distances and sorts by distance
+        // Apply filters
+        results = rawResults.filter((poi) => {
+          // Filter by minimum rating
+          if (filter.minRating > 0 && poi.rating < filter.minRating) {
+            return false;
+          }
+          // Filter by open now
+          if (filter.openNow && poi.isOpen === false) {
+            return false;
+          }
+          return true;
+        });
 
         if (results.length < SEARCH_CONFIG.minResults) {
           currentRadius += SEARCH_CONFIG.radiusStep;
@@ -175,6 +187,22 @@ export function usePOI(): UsePOIReturn {
       searchNearby();
     }
   }, [currentPosition, isSearching, searchNearby]);
+
+  // Re-search when filter changes (after initial search)
+  useEffect(() => {
+    const filterKey = JSON.stringify(filter);
+
+    if (previousFilterRef.current === null) {
+      // First render - just store the filter
+      previousFilterRef.current = filterKey;
+      return;
+    }
+
+    if (previousFilterRef.current !== filterKey && currentPosition && !isSearching) {
+      previousFilterRef.current = filterKey;
+      searchNearby();
+    }
+  }, [filter, currentPosition, isSearching, searchNearby]);
 
   return {
     pois,

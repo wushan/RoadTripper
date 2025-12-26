@@ -43,13 +43,17 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
     }
   }, [pois, animatedIds]);
 
-  // Scroll to selected POI
+  // Scroll to selected POI (with delay to wait for expand animation)
   useEffect(() => {
     if (selectedPOIId && containerRef.current && isExpanded) {
-      const element = containerRef.current.querySelector(`[data-poi-id="${selectedPOIId}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      // Delay scroll to wait for list expand animation (300ms) to complete
+      const timer = setTimeout(() => {
+        const element = containerRef.current?.querySelector(`[data-poi-id="${selectedPOIId}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
     }
   }, [selectedPOIId, isExpanded]);
 

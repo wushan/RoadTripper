@@ -7,6 +7,7 @@ import { Loading } from '@components/common/Loading';
 import { SplashScreen } from '@components/common/SplashScreen';
 import { FilterPanel } from '@components/Filter';
 import { PaywallModal } from '@components/Paywall';
+import { AboutModal } from '@components/About';
 import { InstallPrompt, UpdateNotification } from '@components/PWA';
 import { useLocationStore } from '@store/location-store';
 import { usePOIStore } from '@store/poi-store';
@@ -174,6 +175,7 @@ export function App() {
 
         <FilterPanel />
         <PaywallModal />
+        <AboutModal />
 
         {/* PWA Prompts */}
         {canInstall && (

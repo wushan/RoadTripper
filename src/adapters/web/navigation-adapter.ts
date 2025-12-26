@@ -52,14 +52,36 @@ export class WebNavigationAdapter implements NavigationProvider {
     return this.getGoogleMapsWebUrl(destination, mode);
   }
 
+  private isPWA(): boolean {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  }
+
   async openNavigation(
     destination: NavigationDestination,
     mode: NavigationMode = 'driving'
   ): Promise<boolean> {
     try {
+      const webUrl = this.getGoogleMapsWebUrl(destination, mode);
+
+      // In PWA mode on iOS, use a simple link approach to avoid blank screen
+      if (this.isPWA() && this.isIOS()) {
+        // Create a temporary link and click it - this properly opens in Safari
+        const link = document.createElement('a');
+        link.href = webUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return true;
+      }
+
+      // For Android or non-PWA iOS, try deep link first
       if (this.isIOS() || this.isAndroid()) {
         const appUrl = this.getGoogleMapsAppUrl(destination, mode);
 
+        // Use hidden iframe to try opening the app
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = appUrl;
@@ -68,11 +90,13 @@ export class WebNavigationAdapter implements NavigationProvider {
         await new Promise((resolve) => setTimeout(resolve, 500));
         document.body.removeChild(iframe);
 
-        window.open(this.getGoogleMapsWebUrl(destination, mode), '_blank');
+        // Open web URL as fallback (for when app is not installed)
+        window.open(webUrl, '_blank', 'noopener,noreferrer');
         return true;
       }
 
-      window.open(this.getGoogleMapsWebUrl(destination, mode), '_blank');
+      // Desktop: just open web URL
+      window.open(webUrl, '_blank', 'noopener,noreferrer');
       return true;
     } catch (error) {
       console.error('Failed to open navigation:', error);

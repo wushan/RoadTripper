@@ -26,7 +26,7 @@ export function UpdateNotification({ onUpdate, onDismiss }: UpdateNotificationPr
 
   return (
     <div
-      className={`fixed inset-x-0 top-0 z-50 p-4 transition-transform duration-300 ease-out ${
+      className={`fixed inset-x-0 top-0 z-[200] p-4 transition-transform duration-300 ease-out ${
         isVisible ? 'translate-y-0' : '-translate-y-full'
       }`}
     >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -7,16 +7,26 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onComplete, minDisplayTime = 1500 }: SplashScreenProps) {
   const [isExiting, setIsExiting] = useState(false);
+  const hasCompleted = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep ref updated
+  onCompleteRef.current = onComplete;
+
+  const handleComplete = useCallback(() => {
+    if (hasCompleted.current) return;
+    hasCompleted.current = true;
+    setIsExiting(true);
+    // Wait for fade out animation to complete
+    setTimeout(() => {
+      onCompleteRef.current();
+    }, 300);
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsExiting(true);
-      // Wait for fade out animation to complete
-      setTimeout(onComplete, 300);
-    }, minDisplayTime);
-
+    const timer = setTimeout(handleComplete, minDisplayTime);
     return () => clearTimeout(timer);
-  }, [onComplete, minDisplayTime]);
+  }, [minDisplayTime, handleComplete]);
 
   return (
     <div
@@ -24,6 +34,8 @@ export function SplashScreen({ onComplete, minDisplayTime = 1500 }: SplashScreen
         isExiting ? 'opacity-0' : 'opacity-100'
       }`}
       style={{ backgroundColor: '#1a2744' }}
+      onClick={handleComplete}
+      onTouchEnd={handleComplete}
     >
       {/* Logo */}
       <div className="animate-bounce-slow">

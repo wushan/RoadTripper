@@ -60,16 +60,18 @@ class POIService {
       types
     });
 
-    // Calculate distances
-    const poisWithDistance = pois.map((poi) => ({
-      ...poi,
-      distance: calculateDistance(
-        latitude,
-        longitude,
-        poi.location.latitude,
-        poi.location.longitude
-      )
-    }));
+    // Calculate distances and sort by nearest first
+    const poisWithDistance = pois
+      .map((poi) => ({
+        ...poi,
+        distance: calculateDistance(
+          latitude,
+          longitude,
+          poi.location.latitude,
+          poi.location.longitude
+        )
+      }))
+      .sort((a, b) => a.distance - b.distance);
 
     // Update caches
     this.memoryCache = {

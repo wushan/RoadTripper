@@ -10,24 +10,27 @@ export function useFilteredPOIs(): POI[] {
   const filter = usePOIStore((state) => state.filter);
 
   const filteredPOIs = useMemo(() => {
-    return pois.filter((poi) => {
-      // Filter by category
-      if (!filter.categories.includes(poi.type)) {
-        return false;
-      }
+    return pois
+      .filter((poi) => {
+        // Filter by category
+        if (!filter.categories.includes(poi.type)) {
+          return false;
+        }
 
-      // Filter by minimum rating
-      if (filter.minRating > 0 && poi.rating < filter.minRating) {
-        return false;
-      }
+        // Filter by minimum rating
+        if (filter.minRating > 0 && poi.rating < filter.minRating) {
+          return false;
+        }
 
-      // Filter by open now (only if the flag is set and we have isOpen data)
-      if (filter.openNow && poi.isOpen === false) {
-        return false;
-      }
+        // Filter by open now (only if the flag is set and we have isOpen data)
+        if (filter.openNow && poi.isOpen === false) {
+          return false;
+        }
 
-      return true;
-    });
+        return true;
+      })
+      // Ensure sorted by distance (nearest first)
+      .sort((a, b) => a.distance - b.distance);
   }, [pois, filter]);
 
   return filteredPOIs;

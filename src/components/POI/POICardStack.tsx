@@ -20,8 +20,8 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
 
   const pois = useFilteredPOIs();
   const selectedPOIId = usePOIStore((state) => state.selectedPOIId);
+  const setSelectedPOI = usePOIStore((state) => state.setSelectedPOI);
   const isExpanded = useUIStore((state) => state.isPOIListExpanded);
-  const toggleExpanded = useUIStore((state) => state.togglePOIListExpanded);
   const setPOIListExpanded = useUIStore((state) => state.setPOIListExpanded);
   const collapsePOIList = useUIStore((state) => state.collapsePOIList);
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
@@ -60,6 +60,23 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
     [onPOISelect]
   );
 
+  // Handle collapse: clear selection and center on user
+  const handleCollapse = useCallback(() => {
+    setSelectedPOI(null);
+    collapsePOIList();
+  }, [setSelectedPOI, collapsePOIList]);
+
+  // Handle toggle: clear selection when collapsing
+  const handleToggle = useCallback(() => {
+    if (isExpanded) {
+      // Collapsing - clear selection
+      setSelectedPOI(null);
+    }
+    // Use the store's toggle which handles shouldCenterOnUser
+    const { togglePOIListExpanded } = useUIStore.getState();
+    togglePOIListExpanded();
+  }, [isExpanded, setSelectedPOI]);
+
   // Touch gesture handlers for swipe to expand/collapse (on handle area only)
   const handleHandleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -96,14 +113,14 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
         // Swipe up while collapsed → expand
         setPOIListExpanded(true);
       } else if (deltaY > SWIPE_THRESHOLD && touchStartExpanded.current) {
-        // Swipe down while expanded → collapse and center on user
-        collapsePOIList();
+        // Swipe down while expanded → collapse, clear selection, and center on user
+        handleCollapse();
       }
 
       touchStartY.current = null;
       isSwipeGesture.current = false;
     },
-    [setPOIListExpanded, collapsePOIList]
+    [setPOIListExpanded, handleCollapse]
   );
 
   if (pois.length === 0) {
@@ -133,7 +150,7 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
       >
         {/* Handle bar */}
         <button
-          onClick={toggleExpanded}
+          onClick={handleToggle}
           className="w-full flex justify-center pt-2 pb-1"
           aria-label={isExpanded ? '收合' : '展開'}
         >
@@ -154,7 +171,7 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
           </div>
           {!isExpanded && remainingCount > 0 && (
             <button
-              onClick={toggleExpanded}
+              onClick={() => setPOIListExpanded(true)}
               className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
             >
               查看全部
@@ -163,17 +180,16 @@ export function POICardStack({ onPOISelect }: POICardStackProps) {
         </div>
       </div>
 
-      {/* Collapsed view - show only top POI */}
+      {/* Collapsed view - show only top POI (full size for better visibility) */}
       {!isExpanded && topPOI && (
         <div
-          className="px-4 pb-4 animate-slide-up"
+          className="px-4 pb-4"
           data-poi-id={topPOI.id}
         >
           <POICard
             poi={topPOI}
             isActive={topPOI.id === selectedPOIId}
             onTap={() => handlePOITap(topPOI)}
-            compact
           />
         </div>
       )}
